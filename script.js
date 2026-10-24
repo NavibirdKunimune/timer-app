@@ -5,6 +5,7 @@ let timerId = null;         // 動作中のタイマーの番号（止まって�
 const display = document.getElementById("display");
 const minutesInput = document.getElementById("minutesInput");
 const secondsInput = document.getElementById("secondsInput");
+const messageInput = document.getElementById("messageInput");
 
 // 残り秒数を「分:秒」の形にして画面に表示する
 function updateDisplay() {
@@ -41,7 +42,7 @@ function start() {
   timerId = setInterval(function () {
     remaining--;
     if (remaining === 0) {
-      speak("時間です");
+      speak(messageInput.value.trim() || "時間です"); // 空欄のときは「時間です」
       remaining = setSeconds; // 自動でリセットして、そのまま繰り返す
     }
     updateDisplay();
