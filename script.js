@@ -36,9 +36,39 @@ function setInputsDisabled(disabled) {
   secondsInput.disabled = disabled;
 }
 
+// 画面の自動消灯を防ぐ（Screen Wake Lock API）。非対応の端末では何もしない
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator) || wakeLock !== null) return;
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", function () {
+      wakeLock = null; // 画面が裏に回ったときなどに自動で解除される
+    });
+  } catch (e) {
+    wakeLock = null; // 取得できなくてもタイマー自体は動かす
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock !== null) {
+    wakeLock.release();
+    wakeLock = null;
+  }
+}
+
+// アプリが再び前面に戻ったとき、動作中なら取得し直す
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible" && timerId !== null) {
+    requestWakeLock();
+  }
+});
+
 function start() {
   if (timerId !== null || remaining === 0) return; // 二重スタートを防ぐ
   setInputsDisabled(true);
+  requestWakeLock();
   timerId = setInterval(function () {
     remaining--;
     if (remaining === 0) {
@@ -53,6 +83,7 @@ function stop() {
   clearInterval(timerId);
   timerId = null;
   setInputsDisabled(false);
+  releaseWakeLock();
 }
 
 function reset() {
@@ -68,3 +99,8 @@ minutesInput.addEventListener("input", applySetting);
 secondsInput.addEventListener("input", applySetting);
 
 applySetting();
+
+// service worker を登録する（オフライン起動に必要。file:// では動かない）
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(function () {});
+}
